@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+	<dict>
+		<key>name</key>
+		<string>Basic Stream</string>
+		<key>playlist_url</key>
+		<string>https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8</string>
+		<key>is_protected</key>
+		<false/>
+		<key>minimum_download_bitrate</key>
+		<integer>265000</integer>
+	</dict>
+	<dict>
+		<key>name</key>
+		<string>Advanced Stream</string>
+		<key>playlist_url</key>
+		<string>https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8</string>
+		<key>is_protected</key>
+		<false/>
+		<key>minimum_download_bitrate</key>
+		<integer>265000</integer>
+	</dict>
+	<dict>
+		<key>session_id</key>
+		<string>session</string>
+		<key>user_id</key>
+		<string>purchase</string>
+		<key>environment</key>
+		<string>staging</string>
+		<key>merchant</key>
+		<string>six</string>
+		<key>content_key_id_list</key>
+		<array>
+			<string>skd://drmtoday?keyId=6fbf6d37cf3840c09c99ad8da1dff10b</string>
+		</array>
+		<key>name</key>
+		<string>HLS Fairplay</string>
+		<key>playlist_url</key>
+		<string>https://demo.cf.castlabs.com/media/fps/index.m3u8</string>
+		<key>is_protected</key>
+		<true/>
+		<key>minimum_download_bitrate</key>
+		<integer>265000</integer>
+	</dict>
+</array>
+</plist>
