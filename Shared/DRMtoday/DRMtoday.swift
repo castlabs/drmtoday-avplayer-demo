@@ -34,17 +34,16 @@ public struct DRMtoday {
         if (token != nil) {
             request.setValue(token, forHTTPHeaderField: "x-dt-auth-token")
         }
-
-        let dict = ["merchant": stream.merchant,
-                    "userId": stream.userId,
-                    "sessionId": stream.sessionId]
-
-        do {
-            let customData = try JSONSerialization.data(withJSONObject: dict, options: [])
-            request.setValue(customData.base64EncodedString(), forHTTPHeaderField: "x-dt-custom-data")
-        } catch {
+        else {
+            let dict = ["merchant": stream.merchant,
+                        "userId": stream.userId,
+                        "sessionId": stream.sessionId]
+            do {
+                let customData = try JSONSerialization.data(withJSONObject: dict, options: [])
+                request.setValue(customData.base64EncodedString(), forHTTPHeaderField: "x-dt-custom-data")
+            } catch {
+            }
         }
-
 
         for t in tasks {
             if t.taskDescription == stream.playlistURL {
@@ -102,7 +101,7 @@ public struct DRMtoday {
         return url?.addingPercentEncoding(withAllowedCharacters: queryKeyValueString) ?? ""
     }
 
-    public static func getLicense(stream: Stream, spcData: Data, token: String, offline: Bool, completion: ((_ ckcData: Data?) -> Void)?) {
+    public static func getLicense(stream: Stream, spcData: Data, token: String?, offline: Bool, completion: ((_ ckcData: Data?) -> Void)?) {
         var urlComponents = URLComponents(string: getDrmTodayFairplayLicenseUrl(stream.environment!))
         if offline {
             urlComponents?.queryItems = [URLQueryItem(name: "offline", value: "true")]
@@ -133,17 +132,21 @@ public struct DRMtoday {
         }
         request.httpMethod = "POST"
         request.httpBody = post.data(using: .utf8, allowLossyConversion: true)
-        request.setValue(token, forHTTPHeaderField: "x-dt-auth-token")
-
-        let dict = ["merchant": stream.merchant,
-                    "userId": stream.userId,
-                    "sessionId": stream.sessionId]
-
-        do {
-            let customData = try JSONSerialization.data(withJSONObject: dict, options: [])
-            request.setValue(customData.base64EncodedString(), forHTTPHeaderField: "x-dt-custom-data")
-        } catch {
+        
+        if (token != nil) {
+            request.setValue(token, forHTTPHeaderField: "x-dt-auth-token")
         }
+        else {
+            let dict = ["merchant": stream.merchant,
+                        "userId": stream.userId,
+                        "sessionId": stream.sessionId]
+            do {
+                let customData = try JSONSerialization.data(withJSONObject: dict, options: [])
+                request.setValue(customData.base64EncodedString(), forHTTPHeaderField: "x-dt-custom-data")
+            } catch {
+            }
+        }
+        
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.setValue(String(format: "%lu", request.httpBody?.count ?? 0), forHTTPHeaderField: "Content-Length")
 

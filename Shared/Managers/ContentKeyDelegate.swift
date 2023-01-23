@@ -58,7 +58,7 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
             return Data()
         }
         
-        let token: String? = nil
+        let token: String? = nil // "{authToken}"
         var applicationCertificate: Data? = nil
         
         /// NOTE: code below is useful when you want to close DRMToday API in a framework
@@ -99,7 +99,7 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
                 
         let data = try JSONEncoder().encode(asset.stream)
         let stream = try JSONDecoder().decode(Stream.self, from: data)
-        let token : String = "{authToken}"
+        let token : String? = nil // "{authToken}"
         
         let group = DispatchGroup()
         group.enter()
