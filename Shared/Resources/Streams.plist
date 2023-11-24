@@ -24,7 +24,7 @@
 	</dict>
 	<dict>
 		<key>session_id</key>
-		<string>session</string>
+		<string>crtjson:{&quot;ref&quot;:&quot;be950c8c-47ce-4b52-bf51-449071347bd3&quot;,&quot;profile&quot;: {&quot;purchase&quot;: {}},&quot;csl&quot;: {&quot;cslTrackingId&quot;:&quot;csl-qa-t1&quot;,&quot;sessionDuration&quot;:300000,&quot;derivationType&quot;:&quot;CLIENT_ASSET&quot;},&quot;storeLicense&quot;: false}</string>
 		<key>user_id</key>
 		<string>purchase</string>
 		<key>environment</key>
@@ -36,7 +36,7 @@
 			<string>skd://drmtoday?keyId=6fbf6d37cf3840c09c99ad8da1dff10b</string>
 		</array>
 		<key>name</key>
-		<string>HLS Fairplay</string>
+		<string>CSL demo</string>
 		<key>playlist_url</key>
 		<string>https://demo.cf.castlabs.com/media/fps/index.m3u8</string>
 		<key>is_protected</key>

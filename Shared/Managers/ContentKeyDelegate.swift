@@ -18,6 +18,11 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
         case noCKCReturnedByKSM
     }
     
+    var applicationCertificate: Data? = nil
+    
+    var cslToken : String? = nil
+    var renewalPeriod : Int? = nil
+    
     // MARK: Properties
     
     /// The directory that is used to save persistable content keys.
@@ -59,19 +64,21 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
         }
         
         let token: String? = nil // "{authToken}"
-        var applicationCertificate: Data? = nil
         
         /// NOTE: code below is useful when you want to close DRMToday API in a framework
         let data = try JSONEncoder().encode(asset.stream)
         let stream = try JSONDecoder().decode(Stream.self, from: data)
         
-        let group = DispatchGroup()
-        group.enter()
-        DRMtoday.getCertificate(stream: stream, token: token) { (certificate) in
-            applicationCertificate = certificate
-            group.leave()
+        if (applicationCertificate == nil) {
+            let group = DispatchGroup()
+            group.enter()
+            
+            DRMtoday.getCertificate(stream: stream, token: token) { (certificate) in
+                self.applicationCertificate = certificate
+                group.leave()
+            }
+            group.wait()
         }
-        group.wait()
         
         guard applicationCertificate != nil else {
             throw ProgramError.missingApplicationCertificate
@@ -103,8 +110,12 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
         
         let group = DispatchGroup()
         group.enter()
-        DRMtoday.getLicense(stream: stream, spcData: spcData, token: token, offline: persistable) { (ckc) in
+
+        DRMtoday.getLicense(stream: stream, spcData: spcData, token: token, offline: persistable, cslToken: self.cslToken) { (ckc, newCslToken, renewalPeriod ) in
             ckcData = ckc
+            self.cslToken = newCslToken
+            self.renewalPeriod = renewalPeriod
+            
             let escapedName = asset.stream.name.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed)
             let filename = self.getDocumentsDirectory().appendingPathComponent("").appendingPathComponent(escapedName! + (persistable ? "offline" : "online") + ".dat")
             do {
@@ -167,7 +178,7 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
      determines that the content is encrypted based on the playlist the client provided when it requests playback.
      */
     func contentKeySession(_ session: AVContentKeySession, didProvide keyRequest: AVContentKeyRequest) {
-        handleStreamingContentKeyRequest(keyRequest: keyRequest)
+        handleStreamingContentKeyRequest(keyRequest: keyRequest, session: session)
     }
     
     /*
@@ -175,7 +186,7 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
      Will be invoked by an AVContentKeySession as the result of a call to -renewExpiringResponseDataForContentKeyRequest:.
      */
     func contentKeySession(_ session: AVContentKeySession, didProvideRenewingContentKeyRequest keyRequest: AVContentKeyRequest) {
-        handleStreamingContentKeyRequest(keyRequest: keyRequest)
+        handleStreamingContentKeyRequest(keyRequest: keyRequest, session: session)
     }
     
     /*
@@ -189,7 +200,6 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
      */
     func contentKeySession(_ session: AVContentKeySession, shouldRetry keyRequest: AVContentKeyRequest,
                            reason retryReason: AVContentKeyRequestRetryReason) -> Bool {
-        
         var shouldRetry = false
         
         switch retryReason {
@@ -229,7 +239,7 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
     
     // MARK: API
     
-    func handleStreamingContentKeyRequest(keyRequest: AVContentKeyRequest) {
+    func handleStreamingContentKeyRequest(keyRequest: AVContentKeyRequest, session: AVContentKeySession) {
         guard let contentKeyIdentifierString = keyRequest.identifier as? String,
             let contentKeyIdentifierURL = URL(string: contentKeyIdentifierString),
             let assetIDString = contentKeyIdentifierURL.host,
@@ -277,6 +287,20 @@ class ContentKeyDelegate: NSObject, AVContentKeySessionDelegate {
                          Provide the content key response to make protected content available for processing.
                          */
                         keyRequest.processContentKeyResponse(keyResponse)
+                        
+                        if self?.renewalPeriod != nil {
+                            print("Key is due to expire. Setting timer for renewal in \(self?.renewalPeriod) secs.")
+                            
+                            DispatchQueue.global().asyncAfter(deadline: .now() + .seconds((self!.renewalPeriod!))) { [weak self] in
+                                guard let self = self else {
+                                    print("ContentKeyDelegate instance destroyed before renewal timer fired")
+                                    return
+                                }
+                                print(">>> renewing license")
+                                session.renewExpiringResponseData(for: keyRequest)
+                            }
+                        }
+                        
                     } catch {
                         keyRequest.processContentKeyResponseError(error)
                     }

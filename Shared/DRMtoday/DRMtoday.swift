@@ -12,6 +12,8 @@ public struct DRMtoday {
 
     static let session = URLSession.shared
     static var tasks = [URLSessionDataTask]()
+    
+    let cslToken = ""
 
     static func getDrmTodayFairplayCertificateUrl(_ environment: String) -> String {
         switch environment {
@@ -101,7 +103,7 @@ public struct DRMtoday {
         return url?.addingPercentEncoding(withAllowedCharacters: queryKeyValueString) ?? ""
     }
 
-    public static func getLicense(stream: Stream, spcData: Data, token: String?, offline: Bool, completion: ((_ ckcData: Data?) -> Void)?) {
+    public static func getLicense(stream: Stream, spcData: Data, token: String?, offline: Bool, cslToken: String?, completion: ((_ ckcData: Data?, _ newCslToken : String?, _ renewalInfo : Int?) -> Void)?) {
         var urlComponents = URLComponents(string: getDrmTodayFairplayLicenseUrl(stream.environment!))
         if offline {
             urlComponents?.queryItems = [URLQueryItem(name: "offline", value: "true")]
@@ -133,6 +135,10 @@ public struct DRMtoday {
         request.httpMethod = "POST"
         request.httpBody = post.data(using: .utf8, allowLossyConversion: true)
         
+        if (cslToken != nil) {
+            request.setValue(cslToken, forHTTPHeaderField: "x-dt-csl-tracking-token")
+        }
+        
         if (token != nil) {
             request.setValue(token, forHTTPHeaderField: "x-dt-auth-token")
         }
@@ -146,13 +152,12 @@ public struct DRMtoday {
             } catch {
             }
         }
-        
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.setValue(String(format: "%lu", request.httpBody?.count ?? 0), forHTTPHeaderField: "Content-Length")
 
         for t in tasks {
             if t.taskDescription == stream.playlistURL {
-                completion?(nil)
+                completion?(nil, nil, nil)
                 return
             }
         }
@@ -160,12 +165,31 @@ public struct DRMtoday {
         let requestBody = request.httpBody?.base64EncodedString()
         print("License request body: ", requestBody!)
         print("License request headers: ", request.allHTTPHeaderFields!)
+        
+        var cslHeader : String? = nil
+        var renewalPeriod : Int? = nil
 
         let task = session.dataTask(with: request, completionHandler: { (data: Data?, response: URLResponse?, error: Error?) -> Void in
             if let httpResponse = response as? HTTPURLResponse {
                 let responseBody = String(data: data!, encoding: String.Encoding.ascii)
                 print("License response body: ", responseBody!)
                 print("License response headers: ", httpResponse.allHeaderFields)
+                
+                cslHeader = httpResponse.allHeaderFields["x-dt-csl-tracking-token"] as? String
+                
+                let dictionary = httpResponse.allHeaderFields
+                    if let base64RenewalInfo = dictionary["x-dt-csl-renewal-info"] as? String {
+                        if let jsonRenewalInfo = Data(base64Encoded: base64RenewalInfo),
+                           let renewalInfo = try? JSONSerialization.jsonObject(with: jsonRenewalInfo, options: []) as? [String: Any],
+                           let renewalPeriodAttr = renewalInfo?["renewalPeriod"] as? Int {
+                            renewalPeriod = renewalPeriodAttr
+                            
+                        } else {
+                            print("x-dt-csl-renewal-info is not valid Base-64 or JSON")
+                        }
+                    } else {
+                        //print("x-dt-csl-renewal-info header not found or doesn't contain a string value")
+                    }
             }
 
             if let error = error {
@@ -175,7 +199,7 @@ public struct DRMtoday {
             let ckcMessage = Data(base64Encoded: data!)
             let ckcBase64 = data?.base64EncodedString()
             print("CKC base64:", ckcBase64!)
-            completion?(ckcMessage)
+            completion?(ckcMessage, cslHeader, renewalPeriod)
 
             var i = 0
             for t in tasks {
